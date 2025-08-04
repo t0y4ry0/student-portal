@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>電子学生証</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Noto Sans JP', sans-serif; }
+        .card-container { perspective: 1000px; }
+        .card-flipper { position: relative; transform-style: preserve-3d; transition: transform 0.6s; }
+        .card-container.flipped .card-flipper { transform: rotateY(180deg); }
+        .card-front, .card-back { 
+            position: absolute; 
+            top: 0;
+            left: 0;
+            width: 100%; 
+            height: 100%; 
+            backface-visibility: hidden; 
+            -webkit-backface-visibility: hidden; 
+            border-radius: 1rem; 
+            overflow: hidden; 
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .card-back { transform: rotateY(180deg); }
+        .aspect-id-card { aspect-ratio: 85.60 / 53.98; }
+        .timetable-cell {
+            padding: 0.5rem 0.25rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            vertical-align: top;
+            min-height: 50px;
+        }
+        .timetable-cell:hover { background-color: #f0f9ff; }
+        .dark .timetable-cell:hover { background-color: #1e3a8a; }
+        
+        /* ▼ 修正点1: 時間割のテキストスタイルをここに集約・修正 */
+        .subject-text {
+            font-size: 12px; /* 10pxから拡大 */
+            font-weight: 700;
+            color: #1f2937; /* Lightモード用の色を明示 */
+        }
+        .location-text {
+            font-size: 11px; /* 9pxから拡大 */
+            color: #6b7280; /* Lightモード用の色を明示 */
+            margin-top: 2px;
+        }
+        .dark .subject-text {
+            color: #f9fafb !important; /* ほぼ白 */
+        }
+        .dark .location-text {
+            color: #d1d5db !important; /* 明るいグレー */
+        }
+        .dark #timetable-editor th {
+             color: #f9fafb;
+        }
+        /* ▲ 修正点1 ここまで */
+        
+        .loader {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-black">
+
+    <div class="w-full max-w-sm mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl flex flex-col">
+        <header id="app-header" class="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-20 flex items-center justify-center relative">
+            <button id="back-button" class="hidden absolute left-4 text-gray-600 dark:text-gray-300" onclick="showPortalView()"><i class="fa-solid fa-chevron-left"></i> 戻る</button>
+            <a id="logo-link" href="https://www.tcue.ac.jp/" target="_blank" rel="noopener noreferrer" class="absolute left-4">
+                <img src="https://www.tcue.ac.jp/resource/images/common/header_logo_ja.svg" alt="大学ロゴ" class="h-8 w-auto">
+            </a>
+            <h1 id="header-title" class="font-bold text-lg text-center text-gray-800 dark:text-white">電子学生証</h1>
+            <span class="absolute bottom-1 right-2 text-[8px] text-gray-400 dark:text-gray-500">unofficial</span>
+        </header>
+
+        <div id="portal-view" class="flex-grow p-6 flex flex-col items-center">
+            <div id="card-container" class="card-container w-full aspect-id-card mb-6" onclick="flipCard()">
+                <div class="card-flipper w-full h-full">
+                    <div class="card-front">
+                        <img src="./student-card-front.jpg" alt="学生証 表面" class="absolute top-0 left-0 w-full h-full object-cover">
+                        <div class="absolute cursor-pointer" style="top: 21%; left: 5%; width: 29%; height: 56%;" onclick="showImageModal('face-photo.jpg', false)"></div>
+                        <div class="absolute cursor-pointer" style="top: 80%; left: 5%; width: 35%; height: 10%;" onclick="showImageModal('barcode.png', true)"></div>
+                    </div>
+                    <div class="card-back">
+                        <img src="./student-card-back.jpg" alt="学生証 裏面" class="absolute top-0 left-0 w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">カードの大部分をタップして裏面を表示</p>
+            <div class="w-full space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <a href="https://campussquare.tcue.ac.jp/campusweb/ssologin.do" target="_blank" rel="noopener noreferrer" class="block w-full rounded-lg shadow-sm overflow-hidden hover:opacity-80 transition"><img src="https://www.tcue.ac.jp/resource/images/home/bnr-campus_square.jpg" alt="CAMPUS SQUARE" class="w-full h-auto"></a>
+                    <a href="https://webclass.tcue.ac.jp/webclass/login.php?auth_mode=SAML" target="_blank" rel="noopener noreferrer" class="block w-full rounded-lg shadow-sm overflow-hidden hover:opacity-80 transition"><img src="https://www.tcue.ac.jp/resource/images/home/bnr-web_class.jpg" alt="Web Class" class="w-full h-auto"></a>
+                </div>
+                 <a href="https://www-uf01.ufinity.jp/tcuelib/" target="_blank" rel="noopener noreferrer" class="w-full flex items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition"><i class="fa-solid fa-book-open text-green-500 w-6 text-center"></i><span class="ml-4 font-semibold text-gray-700 dark:text-gray-200">図書館情報</span><i class="fa-solid fa-chevron-right ml-auto text-gray-400"></i></a>
+                <button onclick="showTimetable()" class="w-full flex items-center bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:bg-gray-100 dark:hover:bg-gray-700 transition"><i class="fa-solid fa-calendar-days text-red-500 w-6 text-center"></i><span class="ml-4 font-semibold text-gray-700 dark:text-gray-200">授業時間割</span><i class="fa-solid fa-chevron-right ml-auto text-gray-400"></i></button>
+            </div>
+        </div>
+
+        <div id="timetable-view" class="hidden p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div><label for="semester-start" class="text-xs font-bold">学期開始日</label><input type="date" id="semester-start" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600"></div>
+                    <div><label for="semester-end" class="text-xs font-bold">学期終了日</label><input type="date" id="semester-end" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600"></div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table id="timetable-editor" class="w-full text-xs text-center border-collapse">
+                        <thead class="bg-gray-100 dark:bg-gray-700"><tr><th class="p-1 border dark:border-gray-600"></th><th class="p-1 border dark:border-gray-600">月</th><th class="p-1 border dark:border-gray-600">火</th><th class="p-1 border dark:border-gray-600">水</th><th class="p-1 border dark:border-gray-600">木</th><th class="p-1 border dark:border-gray-600">金</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <button id="auth-button" onclick="handleAuthClick()" class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center"><i class="fa-brands fa-google mr-2"></i><span>Googleカレンダーに同期</span></button>
+                <p id="sync-status" class="text-center text-sm mt-2 h-5"></p>
+            </div>
+            <div class="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg text-xs"><p class="font-bold mb-2">初回設定: 各種APIキー</p><p class="mb-1">Googleカレンダー連携機能とAIアシスタント機能を利用するには、各種キーを取得して貼り付けてください。</p><input type="text" id="gemini-api-key-input" placeholder="ここにGemini APIキーを貼り付け" class="w-full p-1 mb-2 border rounded dark:bg-gray-700"><input type="text" id="api-key-input" placeholder="ここにGoogle Calendar APIキーを貼り付け" class="w-full p-1 mb-2 border rounded dark:bg-gray-700"><input type="text" id="client-id-input" placeholder="ここにGoogle OAuthクライアントIDを貼り付け" class="w-full p-1 border rounded dark:bg-gray-700"><button onclick="saveApiKeys()" class="mt-2 w-full bg-gray-600 text-white text-xs py-1 rounded hover:bg-gray-700">保存</button></div>
+        </div>
+    </div>
+    
+    <div id="class-selector-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-30 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
+            <header class="p-4 border-b dark:border-gray-600"><h3 class="font-bold text-lg">授業を選択</h3><p class="text-sm text-gray-500">（大学院の授業データです）</p></header>
+            <main id="class-list" class="p-4 space-y-2 overflow-y-auto"></main>
+            <div id="gemini-response-area" class="p-4 border-t dark:border-gray-600 text-sm"></div>
+            <footer class="p-4 border-t dark:border-gray-600 flex justify-end space-x-2">
+                 <button onclick="selectClass(null, null, '', '')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">クリア</button>
+                <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 text-sm">閉じる</button>
+            </footer>
+        </div>
+    </div>
+    
+    <div id="brightness-overlay" class="hidden fixed inset-0 bg-white z-30"></div>
+    <div id="image-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-40 flex items-center justify-center p-4" onclick="closeImageModal()">
+        <img id="modal-image" src="" alt="拡大画像" class="max-w-full max-h-full rounded-lg">
+    </div>
+
+    <script>
+        // --- ダークモード検知スクリプト ---
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark')
+        } else {
+            document.documentElement.classList.remove('dark')
+        }
+
+        // --- 授業データ (PDFより抜粋) ---
+        const masterTimetableData = {
+            0: { 1: [{ subject: '管理会計研究', teacher: '中村', location: '414' }], 3: [{ subject: '経済学方法論研究', teacher: '伊藤', location: '研究室' }, { subject: '経営戦略研究', teacher: '開機', location: '研究室' }, { subject: '民法研究', teacher: '谷口', location: '311' }], 5: [{ subject: '日本経済史研究', teacher: '富澤', location: '223' }, { subject: '金融論研究', teacher: '森', location: '研究室' }], 6: [{ subject: '日本経済史研究演習Ⅱ', teacher: '富澤', location: '223' }] },
+            1: { 0: [{ subject: '消費者行動論研究', teacher: '佐藤敏', location: '311' }], 1: [{ subject: 'マクロ経済研究', teacher: '中野', location: '414' }, { subject: '環境経済研究', teacher: '山本', location: '614' }], 2: [{ subject: 'エクイティ・インベストメント研究', teacher: '阿部', location: '研究室' }, { subject: '日本経営史研究', teacher: '加藤', location: '414' }], 3: [{ subject: '国際経営研究', teacher: '清水', location: '研究室' }, { subject: '近代経済学史研究', teacher: '中路', location: '研究室' }, { subject: '経済数学研究', teacher: '山崎', location: '研究室' }], 5: [{ subject: 'ELI研究', teacher: '土谷', location: '研究室' }], 6: [{ subject: '経営組織研究', teacher: '藤本', location: '611' }], },
+            2: { 4: [{ subject: '民法研究演習', teacher: '谷口', location: '311' }] },
+            3: { 0: [{ subject: '財務会計研究', teacher: '藻利', location: '611' }, { subject: '世界経済研究', teacher: '矢野', location: '研究室' }], 1: [{ subject: '人事労務管理研究', teacher: '永田', location: '312' }, { subject: '知的財産法研究', teacher: '澤田', location: '311' }], 3: [{ subject: '公共経済学研究', teacher: '溝口', location: '312' }, { subject: '教育心理学研究', teacher: '木下', location: '研究室' }, { subject: '社会保障研究', teacher: '鶴田', location: '研究室' }], 4: [{ subject: '文章技法研究', teacher: '高松', location: '414' }, { subject: '労働経済研究', teacher: '小林', location: '研究室' }], 5: [{ subject: 'アントレプレナーシップ研究', teacher: '井上', location: '研究室' }], 6: [{ subject: '西洋経済史研究', teacher: '唐澤', location: '研究室' }] },
+            4: {}
+        };
+        let userTimetable = {};
+
+        // --- 定数と設定 ---
+        const CLASS_TIMES = [ { start: '08:50', end: '10:20' }, { start: '10:30', end: '12:00' }, { start: '12:40', end: '14:10' }, { start: '14:20', end: '15:50' }, { start: '16:00', end: '17:30' }, { start: '18:00', end: '19:30' }, { start: '19:35', end: '21:05' } ];
+        const WEEK_DAYS = ['MO', 'TU', 'WE', 'TH', 'FR'];
+        let GEMINI_API_KEY = '';
+        let API_KEY = '';
+        let CLIENT_ID = '';
+
+        // --- UI操作 ---
+        const portalView = document.getElementById('portal-view');
+        const timetableView = document.getElementById('timetable-view');
+        const headerTitle = document.getElementById('header-title');
+        const backButton = document.getElementById('back-button');
+        const logoLink = document.getElementById('logo-link');
+        const syncStatus = document.getElementById('sync-status');
+        const classSelectorModal = document.getElementById('class-selector-modal');
+        const classList = document.getElementById('class-list');
+        const geminiResponseArea = document.getElementById('gemini-response-area');
+        const imageModal = document.getElementById('image-modal');
+        const modalImage = document.getElementById('modal-image');
+        const brightnessOverlay = document.getElementById('brightness-overlay');
+        let currentCell = { day: null, period: null };
+
+        function flipCard() { document.getElementById('card-container').classList.toggle('flipped'); }
+        function showTimetable() { portalView.classList.add('hidden'); timetableView.classList.remove('hidden'); headerTitle.innerText = '時間割の編集と同期'; backButton.classList.remove('hidden'); logoLink.classList.add('hidden'); }
+        function showPortalView() { portalView.classList.remove('hidden'); timetableView.classList.add('hidden'); headerTitle.innerText = '電子学生証'; backButton.classList.add('hidden'); logoLink.classList.remove('hidden'); }
+
+        // --- 画像拡大モーダル ---
+        function showImageModal(src, isBarcode) {
+            event.stopPropagation(); // カードのフリップイベントを防ぐ
+            if (isBarcode) {
+                brightnessOverlay.classList.remove('hidden');
+            }
+            modalImage.src = src;
+            imageModal.classList.remove('hidden');
+        }
+        function closeImageModal() {
+            imageModal.classList.add('hidden');
+            brightnessOverlay.classList.add('hidden');
+        }
+
+        // --- 時間割エディタ生成 ---
+        function createTimetableEditor() {
+            const tbody = document.querySelector("#timetable-editor tbody");
+            tbody.innerHTML = '';
+            for (let i = 0; i < 7; i++) { // 7時限
+                const row = document.createElement('tr');
+                const periodCell = document.createElement('td');
+                periodCell.className = 'font-bold p-1 border dark:border-gray-600 align-middle';
+                periodCell.textContent = i + 1;
+                row.appendChild(periodCell);
+                for (let j = 0; j < 5; j++) { // 5曜日
+                    const cell = document.createElement('td');
+                    cell.className = 'border dark:border-gray-600 timetable-cell';
+                    cell.dataset.day = j; cell.dataset.period = i;
+                    cell.onclick = () => openModal(j, i);
+                    const cellKey = `d${j}-p${i}`;
+                    const savedClass = userTimetable[cellKey];
+                    if (savedClass && savedClass.subject) {
+                        // ▼ 修正点2: 文字サイズ等のクラス指定を削除し、CSSで管理するように変更
+                        cell.innerHTML = `<div class="subject-text">${savedClass.subject}</div><div class="location-text">${savedClass.location}</div>`;
+                        // ▲ 修正点2
+                    } else {
+                        cell.innerHTML = '&nbsp;';
+                    }
+                    row.appendChild(cell);
+                }
+                tbody.appendChild(row);
+            }
+        }
+        
+        // --- 授業選択モーダル ---
+        function openModal(dayIndex, periodIndex) {
+            currentCell.day = dayIndex; currentCell.period = periodIndex;
+            classList.innerHTML = '';
+            geminiResponseArea.innerHTML = '';
+            const classes = masterTimetableData[dayIndex]?.[periodIndex] || [];
+            if (classes.length > 0) {
+                classes.forEach(cls => {
+                    const classItem = document.createElement('div');
+                    classItem.className = 'p-3 bg-gray-100 dark:bg-gray-700 rounded-lg';
+                    const classInfo = document.createElement('div');
+                    classInfo.className = 'flex justify-between items-center';
+                    classInfo.innerHTML = `<div><div class="font-bold">${cls.subject}</div><div class="text-sm text-gray-500">${cls.teacher} / ${cls.location}</div></div>`;
+                    const buttonGroup = document.createElement('div');
+                    buttonGroup.className = 'flex items-center space-x-2';
+                    const aiButton = document.createElement('button');
+                    aiButton.innerHTML = '✨ AI解説';
+                    aiButton.className = 'text-xs bg-purple-500 text-white px-2 py-1 rounded-full hover:bg-purple-600';
+                    aiButton.onclick = (e) => { e.stopPropagation(); getClassSummary(cls.subject); };
+                    const selectButton = document.createElement('button');
+                    selectButton.innerHTML = '選択';
+                    selectButton.className = 'text-xs bg-blue-500 text-white px-2 py-1 rounded-full hover:bg-blue-600';
+                    selectButton.onclick = (e) => { e.stopPropagation(); selectClass(dayIndex, periodIndex, cls.subject, cls.location); };
+                    buttonGroup.appendChild(aiButton);
+                    buttonGroup.appendChild(selectButton);
+                    classInfo.appendChild(buttonGroup);
+                    classItem.appendChild(classInfo);
+                    classList.appendChild(classItem);
+                });
+            } else {
+                classList.innerHTML = '<p class="text-center text-gray-500">この時間帯に開講されている授業はありません。</p>';
+            }
+            classSelectorModal.classList.remove('hidden');
+        }
+        
+        function selectClass(dayIndex, periodIndex, subject, location) {
+            if (dayIndex === null) { dayIndex = currentCell.day; periodIndex = currentCell.period; }
+            const cellKey = `d${dayIndex}-p${periodIndex}`;
+            if (subject) { userTimetable[cellKey] = { subject, location }; }
+            else { delete userTimetable[cellKey]; }
+            saveUserTimetable();
+            createTimetableEditor();
+            closeModal();
+        }
+
+        function closeModal() { classSelectorModal.classList.add('hidden'); }
+
+        // --- 時間割データの保存と読み込み ---
+        function saveUserTimetable() { localStorage.setItem('userTimetable', JSON.stringify(userTimetable)); }
+        function loadUserTimetable() {
+            try {
+                const saved = localStorage.getItem('userTimetable');
+                if (saved) { userTimetable = JSON.parse(saved); }
+            } catch (e) {
+                console.error("Failed to parse user timetable from localStorage", e);
+                userTimetable = {};
+            }
+        }
+
+        // --- APIキーの保存と読み込み ---
+        function saveApiKeys() {
+            GEMINI_API_KEY = document.getElementById('gemini-api-key-input').value;
+            API_KEY = document.getElementById('api-key-input').value;
+            CLIENT_ID = document.getElementById('client-id-input').value;
+            if (GEMINI_API_KEY && API_KEY && CLIENT_ID) {
+                localStorage.setItem('geminiApiKey', GEMINI_API_KEY);
+                localStorage.setItem('googleApiKey', API_KEY);
+                localStorage.setItem('googleClientId', CLIENT_ID);
+                alert('APIキーを保存しました。');
+                initializeGoogleClients();
+            } else {
+                alert('すべてのAPIキーを入力してください。');
+            }
+        }
+
+        function loadApiKeys() {
+            GEMINI_API_KEY = localStorage.getItem('geminiApiKey');
+            API_KEY = localStorage.getItem('googleApiKey');
+            CLIENT_ID = localStorage.getItem('googleClientId');
+            if (GEMINI_API_KEY) document.getElementById('gemini-api-key-input').value = GEMINI_API_KEY;
+            if (API_KEY) document.getElementById('api-key-input').value = API_KEY;
+            if (CLIENT_ID) document.getElementById('client-id-input').value = CLIENT_ID;
+        }
+        
+        // --- Gemini API ---
+        async function getClassSummary(subject) {
+            if (!GEMINI_API_KEY) {
+                geminiResponseArea.innerHTML = `<p class="text-red-500">エラー: Gemini APIキーが設定されていません。</p>`;
+                return;
+            }
+            geminiResponseArea.innerHTML = '<div class="flex items-center justify-center"><div class="loader"></div><p class="ml-2">AIが解説を生成中...</p></div>';
+
+            const prompt = `「${subject}」という大学院の授業について、学生向けに主な学習内容、研究テーマ、コンセプトを簡潔に箇条書きで説明してください。`;
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                const result = await response.json();
+                const text = result.candidates[0].content.parts[0].text;
+                geminiResponseArea.innerHTML = `<p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">${text}</p>`;
+            } catch (error) {
+                console.error(error);
+                geminiResponseArea.innerHTML = `<p class="text-red-500">エラーが発生しました。APIキーやネットワーク接続を確認してください。</p>`;
+            }
+        }
+
+        // --- Googleクライアントの初期化 ---
+        function initializeGoogleClients() {
+            if (document.getElementById('google-gapi-script') || !API_KEY || !CLIENT_ID) return;
+            const gapiScript = document.createElement('script');
+            gapiScript.id = 'google-gapi-script';
+            gapiScript.src = 'https://apis.google.com/js/api.js';
+            gapiScript.async = true; gapiScript.defer = true;
+            gapiScript.onload = () => gapi.load('client', initializeGapiClient);
+            document.body.appendChild(gapiScript);
+
+            const gisScript = document.createElement('script');
+            gisScript.id = 'google-gis-script';
+            gisScript.src = 'https://accounts.google.com/gsi/client';
+            gisScript.async = true; gisScript.defer = true;
+            gisScript.onload = initializeGisClient;
+            document.body.appendChild(gisScript);
+        }
+
+        // --- Google Calendar API 連携 ---
+        let tokenClient;
+        async function initializeGapiClient() { await gapi.client.init({ apiKey: API_KEY, discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest"] }); }
+        function initializeGisClient() { tokenClient = google.accounts.oauth2.initTokenClient({ client_id: CLIENT_ID, scope: 'https://www.googleapis.com/auth/calendar.events', callback: '' }); }
+
+        function handleAuthClick() {
+            if (!API_KEY || !CLIENT_ID) { syncStatus.textContent = 'エラー: Google関連のAPIキーを設定してください。'; syncStatus.style.color = 'red'; return; }
+            if (!tokenClient) { syncStatus.textContent = 'エラー: Google認証クライアントが初期化されていません。'; syncStatus.style.color = 'red'; return; }
+            if (gapi.client.getToken() === null) {
+                tokenClient.callback = async (resp) => { if (resp.error !== undefined) { throw (resp); } syncStatus.textContent = '認証成功！同期を開始します...'; await syncCalendar(); };
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else { syncCalendar(); }
+        }
+
+        async function syncCalendar() {
+            syncStatus.textContent = 'カレンダーと同期中...'; syncStatus.style.color = 'blue';
+            const semesterStart = document.getElementById('semester-start').value;
+            const semesterEnd = document.getElementById('semester-end').value;
+            if (!semesterStart || !semesterEnd) { syncStatus.textContent = 'エラー: 学期開始日と終了日を設定してください。'; syncStatus.style.color = 'red'; return; }
+
+            const untilDate = new Date(semesterEnd); untilDate.setDate(untilDate.getDate() + 1);
+            const untilString = untilDate.toISOString().replace(/-|:|\.\d{3}/g, '');
+            const batch = gapi.client.newBatch();
+
+            Object.keys(userTimetable).forEach(key => {
+                const [dayIndex, periodIndex] = key.replace('d', '').replace('p', '').split('-').map(Number);
+                const classData = userTimetable[key];
+                
+                if (classData.subject) {
+                    const classTime = CLASS_TIMES[periodIndex];
+                    const weekDay = WEEK_DAYS[dayIndex];
+                    const firstClassDate = new Date(semesterStart);
+                    let dayOffset = (dayIndex + 1) - firstClassDate.getDay();
+                    if (dayOffset < 0) { dayOffset += 7; }
+                    firstClassDate.setDate(firstClassDate.getDate() + dayOffset);
+
+                    if (firstClassDate <= new Date(semesterEnd)) {
+                        const event = {
+                            summary: classData.subject,
+                            location: classData.location,
+                            start: { dateTime: `${firstClassDate.toISOString().slice(0,10)}T${classTime.start}:00`, timeZone: 'Asia/Tokyo' },
+                            end: { dateTime: `${firstClassDate.toISOString().slice(0,10)}T${classTime.end}:00`, timeZone: 'Asia/Tokyo' },
+                            recurrence: [ `RRULE:FREQ=WEEKLY;BYDAY=${weekDay};UNTIL=${untilString}` ]
+                        };
+                        batch.add(gapi.client.calendar.events.insert({ 'calendarId': 'primary', 'resource': event }));
+                    }
+                }
+            });
+            
+            if (Object.keys(batch.getBatch()).length === 0) { syncStatus.textContent = '同期する授業がありません。'; syncStatus.style.color = 'orange'; return; }
+            try { await batch; syncStatus.textContent = '同期が完了しました！'; syncStatus.style.color = 'green'; }
+            catch (err) { console.error(err); syncStatus.textContent = 'エラーが発生しました。'; syncStatus.style.color = 'red'; }
+        }
+
+        // --- 初期化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserTimetable();
+            createTimetableEditor();
+            loadApiKeys();
+            initializeGoogleClients();
+        });
+    </script>
+</body>
+</html>
