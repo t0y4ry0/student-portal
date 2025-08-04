@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>電子学生証</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts (Noto Sans JP) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Noto Sans JP', sans-serif; }
@@ -16,8 +19,6 @@
         .card-container.flipped .card-flipper { transform: rotateY(180deg); }
         .card-front, .card-back { 
             position: absolute; 
-            top: 0;
-            left: 0;
             width: 100%; 
             height: 100%; 
             backface-visibility: hidden; 
@@ -38,27 +39,27 @@
         .timetable-cell:hover { background-color: #f0f9ff; }
         .dark .timetable-cell:hover { background-color: #1e3a8a; }
         
-        /* ▼ 修正点1: 時間割のテキストスタイルをここに集約・修正 */
-        .subject-text {
-            font-size: 12px; /* 10pxから拡大 */
-            font-weight: 700;
-            color: #1f2937; /* Lightモード用の色を明示 */
+        /* 文字色を白に強制指定するクラス */
+        .force-white-text,
+        .dark .force-white-text {
+            color: #ffffff !important;
         }
-        .location-text {
-            font-size: 11px; /* 9pxから拡大 */
-            color: #6b7280; /* Lightモード用の色を明示 */
-            margin-top: 2px;
+        
+        /* ダークモード時の時間割の文字色 */
+        .dark #timetable-editor th,
+        .dark #timetable-editor td {
+            color: #f9fafb; /* gray-50 */
         }
         .dark .subject-text {
-            color: #f9fafb !important; /* ほぼ白 */
+            color: #f9fafb !important; /* gray-50 */
         }
         .dark .location-text {
-            color: #d1d5db !important; /* 明るいグレー */
+            color: #d1d5db !important; /* gray-300 */
         }
-        .dark #timetable-editor th {
-             color: #f9fafb;
+        /* Date inputの文字色とカレンダーアイコンの色 */
+        .dark .date-input-dark {
+            color-scheme: dark;
         }
-        /* ▲ 修正点1 ここまで */
         
         .loader {
             border: 2px solid #f3f3f3;
@@ -113,11 +114,11 @@
         <div id="timetable-view" class="hidden p-4">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
                 <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div><label for="semester-start" class="text-xs font-bold">学期開始日</label><input type="date" id="semester-start" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600"></div>
-                    <div><label for="semester-end" class="text-xs font-bold">学期終了日</label><input type="date" id="semester-end" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600"></div>
+                    <div><label for="semester-start" class="text-xs font-bold force-white-text">学期開始日</label><input type="date" id="semester-start" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text date-input-dark"></div>
+                    <div><label for="semester-end" class="text-xs font-bold force-white-text">学期終了日</label><input type="date" id="semester-end" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text date-input-dark"></div>
                 </div>
                 <div class="overflow-x-auto">
-                    <table id="timetable-editor" class="w-full text-xs text-center border-collapse">
+                    <table id="timetable-editor" class="w-full text-xs text-center border-collapse force-white-text">
                         <thead class="bg-gray-100 dark:bg-gray-700"><tr><th class="p-1 border dark:border-gray-600"></th><th class="p-1 border dark:border-gray-600">月</th><th class="p-1 border dark:border-gray-600">火</th><th class="p-1 border dark:border-gray-600">水</th><th class="p-1 border dark:border-gray-600">木</th><th class="p-1 border dark:border-gray-600">金</th></tr></thead>
                         <tbody></tbody>
                     </table>
@@ -125,13 +126,13 @@
                 <button id="auth-button" onclick="handleAuthClick()" class="mt-4 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center"><i class="fa-brands fa-google mr-2"></i><span>Googleカレンダーに同期</span></button>
                 <p id="sync-status" class="text-center text-sm mt-2 h-5"></p>
             </div>
-            <div class="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg text-xs"><p class="font-bold mb-2">初回設定: 各種APIキー</p><p class="mb-1">Googleカレンダー連携機能とAIアシスタント機能を利用するには、各種キーを取得して貼り付けてください。</p><input type="text" id="gemini-api-key-input" placeholder="ここにGemini APIキーを貼り付け" class="w-full p-1 mb-2 border rounded dark:bg-gray-700"><input type="text" id="api-key-input" placeholder="ここにGoogle Calendar APIキーを貼り付け" class="w-full p-1 mb-2 border rounded dark:bg-gray-700"><input type="text" id="client-id-input" placeholder="ここにGoogle OAuthクライアントIDを貼り付け" class="w-full p-1 border rounded dark:bg-gray-700"><button onclick="saveApiKeys()" class="mt-2 w-full bg-gray-600 text-white text-xs py-1 rounded hover:bg-gray-700">保存</button></div>
+            <div class="mt-4 p-4 bg-yellow-100 dark:bg-yellow-900/50 rounded-lg text-xs"><p class="font-bold mb-2 force-white-text">初回設定: 各種APIキー</p><p class="mb-1 force-white-text">Googleカレンダー連携機能とAIアシスタント機能を利用するには、各種キーを取得して貼り付けてください。</p><input type="text" id="gemini-api-key-input" placeholder="ここにGemini APIキーを貼り付け" class="w-full p-1 mb-2 border rounded dark:bg-gray-700"><input type="text" id="api-key-input" placeholder="ここにGoogle Calendar APIキーを貼り付け" class="w-full p-1 mb-2 border rounded dark:bg-gray-700"><input type="text" id="client-id-input" placeholder="ここにGoogle OAuthクライアントIDを貼り付け" class="w-full p-1 border rounded dark:bg-gray-700"><button onclick="saveApiKeys()" class="mt-2 w-full bg-gray-600 text-white text-xs py-1 rounded hover:bg-gray-700">保存</button></div>
         </div>
     </div>
     
     <div id="class-selector-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-30 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
-            <header class="p-4 border-b dark:border-gray-600"><h3 class="font-bold text-lg">授業を選択</h3><p class="text-sm text-gray-500">（大学院の授業データです）</p></header>
+            <header class="p-4 border-b dark:border-gray-600"><h3 class="font-bold text-lg force-white-text">授業を選択</h3><p class="text-sm text-gray-500 dark:text-gray-400">（大学院の授業データです）</p></header>
             <main id="class-list" class="p-4 space-y-2 overflow-y-auto"></main>
             <div id="gemini-response-area" class="p-4 border-t dark:border-gray-600 text-sm"></div>
             <footer class="p-4 border-t dark:border-gray-600 flex justify-end space-x-2">
@@ -192,7 +193,7 @@
 
         // --- 画像拡大モーダル ---
         function showImageModal(src, isBarcode) {
-            event.stopPropagation(); // カードのフリップイベントを防ぐ
+            event.stopPropagation();
             if (isBarcode) {
                 brightnessOverlay.classList.remove('hidden');
             }
@@ -208,13 +209,13 @@
         function createTimetableEditor() {
             const tbody = document.querySelector("#timetable-editor tbody");
             tbody.innerHTML = '';
-            for (let i = 0; i < 7; i++) { // 7時限
+            for (let i = 0; i < 7; i++) {
                 const row = document.createElement('tr');
                 const periodCell = document.createElement('td');
                 periodCell.className = 'font-bold p-1 border dark:border-gray-600 align-middle';
                 periodCell.textContent = i + 1;
                 row.appendChild(periodCell);
-                for (let j = 0; j < 5; j++) { // 5曜日
+                for (let j = 0; j < 5; j++) {
                     const cell = document.createElement('td');
                     cell.className = 'border dark:border-gray-600 timetable-cell';
                     cell.dataset.day = j; cell.dataset.period = i;
@@ -222,9 +223,7 @@
                     const cellKey = `d${j}-p${i}`;
                     const savedClass = userTimetable[cellKey];
                     if (savedClass && savedClass.subject) {
-                        // ▼ 修正点2: 文字サイズ等のクラス指定を削除し、CSSで管理するように変更
-                        cell.innerHTML = `<div class="subject-text">${savedClass.subject}</div><div class="location-text">${savedClass.location}</div>`;
-                        // ▲ 修正点2
+                        cell.innerHTML = `<div class="font-bold text-[10px] subject-text">${savedClass.subject}</div><div class="text-[9px] location-text">${savedClass.location}</div>`;
                     } else {
                         cell.innerHTML = '&nbsp;';
                     }
@@ -246,7 +245,13 @@
                     classItem.className = 'p-3 bg-gray-100 dark:bg-gray-700 rounded-lg';
                     const classInfo = document.createElement('div');
                     classInfo.className = 'flex justify-between items-center';
-                    classInfo.innerHTML = `<div><div class="font-bold">${cls.subject}</div><div class="text-sm text-gray-500">${cls.teacher} / ${cls.location}</div></div>`;
+
+                    classInfo.innerHTML = `
+                        <div>
+                            <div class="font-bold force-white-text">${cls.subject}</div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400">${cls.teacher} / ${cls.location}</div>
+                        </div>`;
+                    
                     const buttonGroup = document.createElement('div');
                     buttonGroup.className = 'flex items-center space-x-2';
                     const aiButton = document.createElement('button');
@@ -327,7 +332,7 @@
             geminiResponseArea.innerHTML = '<div class="flex items-center justify-center"><div class="loader"></div><p class="ml-2">AIが解説を生成中...</p></div>';
 
             const prompt = `「${subject}」という大学院の授業について、学生向けに主な学習内容、研究テーマ、コンセプトを簡潔に箇条書きで説明してください。`;
-            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`;
             
             try {
                 const response = await fetch(API_URL, {
