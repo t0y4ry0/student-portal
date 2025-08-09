@@ -40,22 +40,10 @@
         .dark .timetable-cell:hover { background-color: #1e3a8a; }
         
         /* 文字色を白に強制指定するクラス */
-        .force-white-text,
-        .dark .force-white-text {
+        .force-white-text {
             color: #ffffff !important;
         }
         
-        /* ダークモード時の時間割の文字色 */
-        .dark #timetable-editor th,
-        .dark #timetable-editor td {
-            color: #f9fafb; /* gray-50 */
-        }
-        .dark .subject-text {
-            color: #f9fafb !important; /* gray-50 */
-        }
-        .dark .location-text {
-            color: #d1d5db !important; /* gray-300 */
-        }
         /* Date inputの文字色とカレンダーアイコンの色 */
         .dark .date-input-dark {
             color-scheme: dark;
@@ -77,23 +65,25 @@
 </head>
 <body class="bg-gray-100 dark:bg-black">
 
-    <div class="w-full max-w-sm mx-auto bg-gray-50 dark:bg-gray-900 min-h-screen shadow-2xl flex flex-col">
-        <header id="app-header" class="bg-white dark:bg-gray-800 shadow-sm p-4 sticky top-0 z-20 flex items-center justify-center relative">
-            <button id="back-button" class="hidden absolute left-4 text-gray-600 dark:text-gray-300" onclick="showPortalView()"><i class="fa-solid fa-chevron-left"></i> 戻る</button>
-            <a id="logo-link" href="https://www.tcue.ac.jp/" target="_blank" rel="noopener noreferrer" class="absolute left-4">
-                <img src="https://www.tcue.ac.jp/resource/images/common/header_logo_ja.svg" alt="大学ロゴ" class="h-8 w-auto">
-            </a>
-            <h1 id="header-title" class="font-bold text-lg text-center text-gray-800 dark:text-white">電子学生証</h1>
-            <span class="absolute bottom-1 right-2 text-[8px] text-gray-400 dark:text-gray-500">unofficial</span>
+    <div class="w-full bg-gray-50 dark:bg-gray-900 min-h-screen flex flex-col">
+        <header id="app-header" class="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-20 w-full">
+            <div class="max-w-sm mx-auto p-4 flex items-center justify-center relative">
+                <button id="back-button" class="hidden absolute left-4 text-gray-600 dark:text-gray-300" onclick="showPortalView()"><i class="fa-solid fa-chevron-left"></i> 戻る</button>
+                <a id="logo-link" href="https://www.tcue.ac.jp/" target="_blank" rel="noopener noreferrer" class="absolute left-4">
+                    <img src="https://www.tcue.ac.jp/resource/images/common/header_logo_ja.svg" alt="大学ロゴ" class="h-8 w-auto">
+                </a>
+                <h1 id="header-title" class="font-bold text-lg text-center text-gray-800 dark:text-white">電子学生証</h1>
+                <span class="absolute bottom-1 right-2 text-[8px] text-gray-400 dark:text-gray-500">unofficial</span>
+            </div>
         </header>
 
-        <div id="portal-view" class="flex-grow p-6 flex flex-col items-center">
+        <div id="portal-view" class="w-full max-w-sm mx-auto flex-grow p-4 md:p-6 flex flex-col items-center">
             <div id="card-container" class="card-container w-full aspect-id-card mb-6" onclick="flipCard()">
                 <div class="card-flipper w-full h-full">
                     <div class="card-front">
                         <img src="./student-card-front.jpg" alt="学生証 表面" class="absolute top-0 left-0 w-full h-full object-cover">
                         <div class="absolute cursor-pointer" style="top: 21%; left: 5%; width: 29%; height: 56%;" onclick="showImageModal('face-photo.jpg', false)"></div>
-                        <div class="absolute cursor-pointer" style="top: 80%; left: 5%; width: 35%; height: 10%;" onclick="showImageModal('barcode.png', true)"></div>
+                        <div class="absolute cursor-pointer" style="top: 80%; left: 5%; width: 35%; height: 10%;" onclick="showImageModal('https://bwipjs-api.metafloor.com/?bcid=code128&text=A1012404511A&includetext&scale=3', true)"></div>
                     </div>
                     <div class="card-back">
                         <img src="./student-card-back.jpg" alt="学生証 裏面" class="absolute top-0 left-0 w-full h-full object-cover">
@@ -111,11 +101,11 @@
             </div>
         </div>
 
-        <div id="timetable-view" class="hidden p-4">
+        <div id="timetable-view" class="w-full max-w-sm mx-auto hidden p-4">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
                 <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div><label for="semester-start" class="text-xs font-bold force-white-text">学期開始日</label><input type="date" id="semester-start" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text date-input-dark"></div>
-                    <div><label for="semester-end" class="text-xs font-bold force-white-text">学期終了日</label><input type="date" id="semester-end" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text date-input-dark"></div>
+                    <div><label for="year-selector" class="text-xs font-bold force-white-text">年度</label><select id="year-selector" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text"></select></div>
+                    <div><label for="semester-selector" class="text-xs font-bold force-white-text">学期</label><select id="semester-selector" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text"></select></div>
                 </div>
                 <div class="overflow-x-auto">
                     <table id="timetable-editor" class="w-full text-xs text-center border-collapse force-white-text">
@@ -142,9 +132,9 @@
         </div>
     </div>
     
-    <div id="brightness-overlay" class="hidden fixed inset-0 bg-white z-30"></div>
-    <div id="image-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 z-40 flex items-center justify-center p-4" onclick="closeImageModal()">
-        <img id="modal-image" src="" alt="拡大画像" class="max-w-full max-h-full rounded-lg">
+    <div id="image-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4" onclick="closeImageModal()">
+        <div id="brightness-overlay" class="hidden fixed inset-0 bg-white"></div>
+        <img id="modal-image" src="" alt="拡大画像" class="max-w-full max-h-full rounded-lg relative z-10">
     </div>
 
     <script>
@@ -157,11 +147,22 @@
 
         // --- 授業データ (PDFより抜粋) ---
         const masterTimetableData = {
-            0: { 1: [{ subject: '管理会計研究', teacher: '中村', location: '414' }], 3: [{ subject: '経済学方法論研究', teacher: '伊藤', location: '研究室' }, { subject: '経営戦略研究', teacher: '開機', location: '研究室' }, { subject: '民法研究', teacher: '谷口', location: '311' }], 5: [{ subject: '日本経済史研究', teacher: '富澤', location: '223' }, { subject: '金融論研究', teacher: '森', location: '研究室' }], 6: [{ subject: '日本経済史研究演習Ⅱ', teacher: '富澤', location: '223' }] },
-            1: { 0: [{ subject: '消費者行動論研究', teacher: '佐藤敏', location: '311' }], 1: [{ subject: 'マクロ経済研究', teacher: '中野', location: '414' }, { subject: '環境経済研究', teacher: '山本', location: '614' }], 2: [{ subject: 'エクイティ・インベストメント研究', teacher: '阿部', location: '研究室' }, { subject: '日本経営史研究', teacher: '加藤', location: '414' }], 3: [{ subject: '国際経営研究', teacher: '清水', location: '研究室' }, { subject: '近代経済学史研究', teacher: '中路', location: '研究室' }, { subject: '経済数学研究', teacher: '山崎', location: '研究室' }], 5: [{ subject: 'ELI研究', teacher: '土谷', location: '研究室' }], 6: [{ subject: '経営組織研究', teacher: '藤本', location: '611' }], },
-            2: { 4: [{ subject: '民法研究演習', teacher: '谷口', location: '311' }] },
-            3: { 0: [{ subject: '財務会計研究', teacher: '藻利', location: '611' }, { subject: '世界経済研究', teacher: '矢野', location: '研究室' }], 1: [{ subject: '人事労務管理研究', teacher: '永田', location: '312' }, { subject: '知的財産法研究', teacher: '澤田', location: '311' }], 3: [{ subject: '公共経済学研究', teacher: '溝口', location: '312' }, { subject: '教育心理学研究', teacher: '木下', location: '研究室' }, { subject: '社会保障研究', teacher: '鶴田', location: '研究室' }], 4: [{ subject: '文章技法研究', teacher: '高松', location: '414' }, { subject: '労働経済研究', teacher: '小林', location: '研究室' }], 5: [{ subject: 'アントレプレナーシップ研究', teacher: '井上', location: '研究室' }], 6: [{ subject: '西洋経済史研究', teacher: '唐澤', location: '研究室' }] },
-            4: {}
+            "2025": {
+                "前期": {
+                    0: { 1: [{ subject: '管理会計研究', teacher: '中村', location: '414' }], 3: [{ subject: '経済学方法論研究', teacher: '伊藤', location: '研究室' }, { subject: '経営戦略研究', teacher: '開機', location: '研究室' }, { subject: '民法研究', teacher: '谷口', location: '311' }], 5: [{ subject: '日本経済史研究', teacher: '富澤', location: '223' }, { subject: '金融論研究', teacher: '森', location: '研究室' }] },
+                    1: { 0: [{ subject: '消費者行動論研究', teacher: '佐藤敏', location: '311' }], 1: [{ subject: 'マクロ経済研究', teacher: '中野', location: '414' }, { subject: '環境経済研究', teacher: '山本', location: '614' }], 2: [{ subject: 'エクイティ・インベストメント研究', teacher: '阿部', location: '研究室' }, { subject: '日本経営史研究', teacher: '加藤', location: '414' }], 3: [{ subject: '国際経営研究', teacher: '清水', location: '研究室' }, { subject: '近代経済学史研究', teacher: '中路', location: '研究室' }, { subject: '経済数学研究', teacher: '山崎', location: '研究室' }], 5: [{ subject: 'ELI研究', teacher: '土谷', location: '研究室' }], 6: [{ subject: '経営組織研究', teacher: '藤本', location: '611' }] },
+                    2: { 4: [{ subject: '民法研究演習', teacher: '谷口', location: '311' }] },
+                    3: { 0: [{ subject: '財務会計研究', teacher: '藻利', location: '611' }, { subject: '世界経済研究', teacher: '矢野', location: '研究室' }], 1: [{ subject: '人事労務管理研究', teacher: '永田', location: '312' }, { subject: '知的財産法研究', teacher: '澤田', location: '311' }], 3: [{ subject: '公共経済学研究', teacher: '溝口', location: '312' }, { subject: '教育心理学研究', teacher: '木下', location: '研究室' }, { subject: '社会保障研究', teacher: '鶴田', location: '研究室' }], 4: [{ subject: '文章技法研究', teacher: '高松', location: '414' }, { subject: '労働経済研究', teacher: '小林', location: '研究室' }], 5: [{ subject: 'アントレプレナーシップ研究', teacher: '井上', location: '研究室' }], 6: [{ subject: '西洋経済史研究', teacher: '唐澤', location: '研究室' }] },
+                    4: {}
+                },
+                "後期": {
+                    0: { 3: [{ subject: '経営戦略特論', teacher: '開機', location: '研究室' }, { subject: '民法特論', teacher: '谷口', location: '311' }], 3: [{ subject: '社会思想史研究', teacher: '名和', location: '研究室' }, { subject: '経済学方法論特論', teacher: '伊藤', location: '研究室' }, { subject: '貿易政策特論', teacher: '野崎', location: '研究室' }] },
+                    1: { 0: [{ subject: '消費者行動論特論', teacher: '佐藤敏', location: '311' }], 1: [{ subject: 'マクロ経済特論', teacher: '中野', location: '414' }, { subject: '環境経済特論', teacher: '山本', location: '614' }], 2: [{ subject: '企業財務特論', teacher: '阿部', location: '研究室' }, { subject: '日本経営史特論', teacher: '加藤', location: '414' }, { subject: '国際経営特論', teacher: '清水', location: '研究室' }], 3: [{ subject: '近代経済学史特論', teacher: '中路', location: '研究室' }, { subject: '経済数学特論', teacher: '山崎', location: '研究室' }], 5: [{ subject: 'ELI特論', teacher: '土谷', location: '研究室' }], 6: [{ subject: '経営組織特論', teacher: '藤本', location: '611' }] },
+                    2: {},
+                    3: { 0: [{ subject: '財務会計特論', teacher: '藻利', location: '研究室' }, { subject: '世界経済特論', teacher: '矢野', location: '研究室' }], 1: [{ subject: '知的財産法特論', teacher: '澤田', location: '311' }], 2: [{ subject: '人事労務管理特論', teacher: '永田', location: '312' }, { subject: '社会保障特論', teacher: '鶴田', location: '研究室' }], 3: [{ subject: '公共経済学特論', teacher: '溝口', location: '312' }, { subject: '教育心理学特論', teacher: '木下', location: '研究室' }], 4: [{ subject: '労働経済特論', teacher: '小林', location: '研究室' }], 5: [{ subject: '商業教育史特論', teacher: '井上', location: '研究室' }, { subject: '金融論特論', teacher: '森', location: '研究室' }], 6: [{ subject: '西洋経済史特論', teacher: '唐澤', location: '研究室' }] },
+                    4: {}
+                }
+            }
         };
         let userTimetable = {};
 
@@ -185,6 +186,8 @@
         const imageModal = document.getElementById('image-modal');
         const modalImage = document.getElementById('modal-image');
         const brightnessOverlay = document.getElementById('brightness-overlay');
+        const yearSelector = document.getElementById('year-selector');
+        const semesterSelector = document.getElementById('semester-selector');
         let currentCell = { day: null, period: null };
 
         function flipCard() { document.getElementById('card-container').classList.toggle('flipped'); }
@@ -195,14 +198,17 @@
         function showImageModal(src, isBarcode) {
             event.stopPropagation();
             if (isBarcode) {
-                brightnessOverlay.classList.remove('hidden');
+                imageModal.classList.remove('bg-black', 'bg-opacity-75');
+                imageModal.classList.add('bg-white');
+            } else {
+                imageModal.classList.add('bg-black', 'bg-opacity-75');
+                imageModal.classList.remove('bg-white');
             }
             modalImage.src = src;
             imageModal.classList.remove('hidden');
         }
         function closeImageModal() {
             imageModal.classList.add('hidden');
-            brightnessOverlay.classList.add('hidden');
         }
 
         // --- 時間割エディタ生成 ---
@@ -223,7 +229,7 @@
                     const cellKey = `d${j}-p${i}`;
                     const savedClass = userTimetable[cellKey];
                     if (savedClass && savedClass.subject) {
-                        cell.innerHTML = `<div class="font-bold text-[10px] subject-text">${savedClass.subject}</div><div class="text-[9px] location-text">${savedClass.location}</div>`;
+                        cell.innerHTML = `<div class="font-bold text-[10px] subject-text">${savedClass.subject}</div><div class="text-[9px] location-text text-gray-500">${savedClass.location}</div>`;
                     } else {
                         cell.innerHTML = '&nbsp;';
                     }
@@ -238,7 +244,9 @@
             currentCell.day = dayIndex; currentCell.period = periodIndex;
             classList.innerHTML = '';
             geminiResponseArea.innerHTML = '';
-            const classes = masterTimetableData[dayIndex]?.[periodIndex] || [];
+            const year = yearSelector.value;
+            const semester = semesterSelector.value;
+            const classes = masterTimetableData[year]?.[semester]?.[dayIndex]?.[periodIndex] || [];
             if (classes.length > 0) {
                 classes.forEach(cls => {
                     const classItem = document.createElement('div');
@@ -248,7 +256,7 @@
 
                     classInfo.innerHTML = `
                         <div>
-                            <div class="font-bold force-white-text">${cls.subject}</div>
+                            <div class="font-bold text-gray-900 dark:text-gray-100">${cls.subject}</div>
                             <div class="text-sm text-gray-600 dark:text-gray-400">${cls.teacher} / ${cls.location}</div>
                         </div>`;
                     
@@ -287,11 +295,16 @@
         function closeModal() { classSelectorModal.classList.add('hidden'); }
 
         // --- 時間割データの保存と読み込み ---
-        function saveUserTimetable() { localStorage.setItem('userTimetable', JSON.stringify(userTimetable)); }
+        function getTimetableStorageKey() {
+            return `userTimetable_${yearSelector.value}_${semesterSelector.value}`;
+        }
+        function saveUserTimetable() {
+            localStorage.setItem(getTimetableStorageKey(), JSON.stringify(userTimetable));
+        }
         function loadUserTimetable() {
             try {
-                const saved = localStorage.getItem('userTimetable');
-                if (saved) { userTimetable = JSON.parse(saved); }
+                const saved = localStorage.getItem(getTimetableStorageKey());
+                userTimetable = saved ? JSON.parse(saved) : {};
             } catch (e) {
                 console.error("Failed to parse user timetable from localStorage", e);
                 userTimetable = {};
@@ -425,9 +438,45 @@
         }
 
         // --- 初期化 ---
-        document.addEventListener('DOMContentLoaded', () => {
+        function updateTimetableDisplay() {
             loadUserTimetable();
             createTimetableEditor();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // セレクターの初期化
+            const years = Object.keys(masterTimetableData);
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = `${year}年度`;
+                yearSelector.appendChild(option);
+            });
+
+            const semesters = ["前期", "後期"];
+            semesters.forEach(semester => {
+                const option = document.createElement('option');
+                option.value = semester;
+                option.textContent = semester;
+                semesterSelector.appendChild(option);
+            });
+
+            // 現在の学期をデフォルトに設定
+            const now = new Date();
+            const currentYear = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 0-11 -> 1-12
+            
+            // 4月～9月を前期、10月～3月を後期と仮定
+            const currentSemester = (currentMonth >= 4 && currentMonth <= 9) ? "前期" : "後期";
+            const academicYear = (currentMonth < 4) ? currentYear - 1 : currentYear;
+
+            yearSelector.value = years.includes(String(academicYear)) ? academicYear : years[0];
+            semesterSelector.value = currentSemester;
+
+            yearSelector.addEventListener('change', updateTimetableDisplay);
+            semesterSelector.addEventListener('change', updateTimetableDisplay);
+            
+            updateTimetableDisplay();
             loadApiKeys();
             initializeGoogleClients();
         });
