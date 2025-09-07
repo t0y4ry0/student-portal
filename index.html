@@ -169,8 +169,9 @@
         let userTimetable = {};
         let longPressTimer;
         let isLongPress = false;
-        let isScrolling = false; // ★ 修正: スクロール状態を管理するフラグ
-        const LONG_PRESS_DURATION = 500; // 500ms
+        let isMoved = false; 
+        let touchStartX, touchStartY;
+        const LONG_PRESS_DURATION = 500; 
 
         // --- Constants and Settings ---
         const AVAILABLE_YEARS = [2025]; 
@@ -274,17 +275,16 @@
                     const item = document.createElement('div');
                     item.className = 'p-3 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900';
                     
-                    item.addEventListener('mousedown', (e) => handlePressStart(e, course));
-                    item.addEventListener('touchstart', (e) => handlePressStart(e, course));
+                    item.addEventListener('mousedown', (e) => handleTouchStart(e, course));
+                    item.addEventListener('touchstart', (e) => handleTouchStart(e, course), { passive: true });
                     
-                    item.addEventListener('mouseup', (e) => handlePressEnd(e, course));
-                    item.addEventListener('touchend', (e) => handlePressEnd(e, course));
+                    item.addEventListener('mouseup', (e) => handleTouchEnd(e, course));
+                    item.addEventListener('touchend', (e) => handleTouchEnd(e, course));
                     
-                    item.addEventListener('mousemove', handleMove);
-                    item.addEventListener('touchmove', handleMove);
+                    item.addEventListener('mousemove', (e) => handleTouchMove(e));
+                    item.addEventListener('touchmove', (e) => handleTouchMove(e), { passive: true });
                     
                     item.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
-
 
                     item.innerHTML = `
                         <div class="font-bold text-gray-900 dark:text-gray-100">${course.科目名} ${course.クラス ? `(${course.クラス})` : ''}</div>
@@ -297,28 +297,51 @@
             }
         }
         
-        // --- ★ 修正: タッチ＆プレス操作のロジック ---
-        function handlePressStart(event, course) {
+        // --- Touch & Press Interaction Logic ---
+        function handleTouchStart(event, course) {
             isLongPress = false;
-            isScrolling = false;
+            isMoved = false;
+
+            const touch = event.type === 'touchstart' ? event.touches[0] : event;
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+
             longPressTimer = setTimeout(() => {
-                isLongPress = true;
-                showClassDetails(course);
+                if (!isMoved) {
+                    isLongPress = true;
+                    showClassDetails(course);
+                }
             }, LONG_PRESS_DURATION);
         }
 
-        function handleMove() {
-            isScrolling = true;
-            clearTimeout(longPressTimer);
+        function handleTouchMove(event) {
+            if (isMoved) return;
+
+            const touch = event.type === 'touchmove' ? event.touches[0] : event;
+            const currentX = touch.clientX;
+            const currentY = touch.clientY;
+
+            if (typeof touchStartX === 'undefined' || typeof touchStartY === 'undefined') return;
+
+            const diffX = Math.abs(touchStartX - currentX);
+            const diffY = Math.abs(touchStartY - currentY);
+
+            if (diffX > 10 || diffY > 10) { // 10px threshold for scrolling
+                isMoved = true;
+                clearTimeout(longPressTimer);
+            }
         }
 
-        function handlePressEnd(event, course) {
+        function handleTouchEnd(event, course) {
             clearTimeout(longPressTimer);
-            if (!isLongPress && !isScrolling) {
+            if (!isLongPress && !isMoved) {
                 selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
             }
             // Reset flags
-            isScrolling = false;
+            isLongPress = false;
+            isMoved = false;
+            touchStartX = undefined;
+            touchStartY = undefined;
         }
 
         function showClassDetails(course) {
