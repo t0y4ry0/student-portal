@@ -95,9 +95,10 @@
 
         <div id="timetable-view" class="w-full max-w-sm mx-auto hidden p-4">
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
-                <div class="grid grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-3 gap-2 mb-4">
                     <div><label for="year-selector" class="text-xs font-bold force-white-text">年度</label><select id="year-selector" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text"></select></div>
                     <div><label for="semester-selector" class="text-xs font-bold force-white-text">学期</label><select id="semester-selector" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text"></select></div>
+                    <div><label for="student-year-selector" class="text-xs font-bold force-white-text">学年</label><select id="student-year-selector" class="w-full border rounded p-1 text-sm dark:bg-gray-700 dark:border-gray-600 force-white-text"><option value="1">1年次</option><option value="2">2年次</option><option value="3">3年次</option><option value="4">4年次</option></select></div>
                 </div>
                 <div class="overflow-x-auto">
                     <table id="timetable-editor" class="w-full text-xs text-center border-collapse force-white-text">
@@ -165,6 +166,7 @@
         const brightnessOverlay = document.getElementById('brightness-overlay');
         const yearSelector = document.getElementById('year-selector');
         const semesterSelector = document.getElementById('semester-selector');
+        const studentYearSelector = document.getElementById('student-year-selector');
         let currentCell = { day: null, period: null };
 
         function flipCard() { document.getElementById('card-container').classList.toggle('flipped'); }
@@ -225,10 +227,14 @@
         function renderSearchResults() {
             const query = classSearchInput.value.toLowerCase().trim();
             const semester = semesterSelector.value;
+            const studentYear = studentYearSelector.value;
+            const yearColumn = `配当年次${studentYear}年次`;
+
             const filteredCourses = allCourses.filter(course => {
                 const semesterMatch = course.開校時期 === semester;
+                const studentYearMatch = course[yearColumn] === '○';
                 const queryMatch = query === '' || (course.科目名 && course.科目名.toLowerCase().includes(query)) || (course.担当教員 && course.担当教員.toLowerCase().includes(query));
-                return semesterMatch && queryMatch;
+                return semesterMatch && studentYearMatch && queryMatch;
             });
 
             classList.innerHTML = '';
@@ -329,8 +335,22 @@
             const currentSemester = (currentMonth >= 4 && currentMonth <= 9) ? "前期" : "後期";
             semesterSelector.value = currentSemester;
 
+            // Load and set saved student year
+            const savedStudentYear = localStorage.getItem('studentYear');
+            if (savedStudentYear) {
+                studentYearSelector.value = savedStudentYear;
+            }
+            
+            // Add Event Listeners
             yearSelector.addEventListener('change', () => loadCourseData(yearSelector.value));
             semesterSelector.addEventListener('change', updateTimetableDisplay);
+            studentYearSelector.addEventListener('change', () => {
+                localStorage.setItem('studentYear', studentYearSelector.value);
+                // If modal is open, refresh search results
+                if (!classSelectorModal.classList.contains('hidden')) {
+                    renderSearchResults();
+                }
+            });
             classSearchInput.addEventListener('input', renderSearchResults);
             
             // Initial Data Load
@@ -339,3 +359,4 @@
     </script>
 </body>
 </html>
+
