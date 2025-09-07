@@ -168,6 +168,7 @@
         let allCourses = []; 
         let userTimetable = {};
         let longPressTimer;
+        let isLongPress = false;
         const LONG_PRESS_DURATION = 500; // 500ms
 
         // --- Constants and Settings ---
@@ -291,19 +292,17 @@
         }
         
         function handlePressStart(event, course) {
-            event.preventDefault();
+            isLongPress = false;
             longPressTimer = setTimeout(() => {
+                isLongPress = true;
                 showClassDetails(course);
             }, LONG_PRESS_DURATION);
         }
 
         function handlePressEnd(event, course) {
             clearTimeout(longPressTimer);
-            if (event.currentTarget.contains(event.target)) {
-                 setTimeout(() => { 
-                    if (!classDetailsModal.classList.contains('hidden')) return; 
-                    selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
-                }, 50);
+            if (!isLongPress) {
+                selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
             }
         }
 
