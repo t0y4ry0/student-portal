@@ -263,7 +263,6 @@
                     const item = document.createElement('div');
                     item.className = 'p-3 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900';
                     
-                    // --- Long Press Event Listeners ---
                     item.addEventListener('mousedown', (e) => handlePressStart(e, course));
                     item.addEventListener('touchstart', (e) => handlePressStart(e, course));
                     item.addEventListener('mouseup', (e) => handlePressEnd(e, course));
@@ -282,7 +281,6 @@
             }
         }
         
-        // --- Long Press Logic ---
         function handlePressStart(event, course) {
             event.preventDefault();
             longPressTimer = setTimeout(() => {
@@ -292,17 +290,16 @@
 
         function handlePressEnd(event, course) {
             clearTimeout(longPressTimer);
-            // If the timeout hasn't fired, it's a tap/click
             if (event.currentTarget.contains(event.target)) {
-                 setTimeout(() => { // Small delay to prevent issues
-                    if (!classDetailsModal.classList.contains('hidden')) return; // Don't select if details are shown
+                 setTimeout(() => { 
+                    if (!classDetailsModal.classList.contains('hidden')) return; 
                     selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
                 }, 50);
             }
         }
 
         function showClassDetails(course) {
-             if (classSelectorModal.classList.contains('hidden')) return; // Prevent firing if search modal is closed
+             if (classSelectorModal.classList.contains('hidden')) return;
             detailsTitle.textContent = course.科目名;
             detailsContent.innerHTML = `
                 <p><strong>担当教員:</strong> ${course.担当教員 || '未設定'}</p>
@@ -345,7 +342,6 @@
             } catch (e) { console.error("Failed to load user timetable", e); userTimetable = {}; }
         }
         
-        // --- CSV Data Loading ---
         async function loadCourseData(year) {
             const filePath = `./data/${year}.csv`;
             try {
@@ -391,19 +387,31 @@
             // Initialize Semester Selector
             semesterSelector.innerHTML = '<option value="前期">前期</option><option value="後期">後期</option>';
             
-            // Set Default Semester
-            const now = new Date();
-            const currentMonth = now.getMonth() + 1;
-            const currentSemester = (currentMonth >= 4 && currentMonth <= 9) ? "前期" : "後期";
-            semesterSelector.value = currentSemester;
+            // --- ★ 修正: 保存された設定を読み込む ---
+            const savedYear = localStorage.getItem('selectedYear');
+            if (savedYear) yearSelector.value = savedYear;
 
-            // Load and set saved student year
+            const savedSemester = localStorage.getItem('selectedSemester');
+            if (savedSemester) {
+                semesterSelector.value = savedSemester;
+            } else {
+                const now = new Date();
+                const currentMonth = now.getMonth() + 1;
+                semesterSelector.value = (currentMonth >= 4 && currentMonth <= 9) ? "前期" : "後期";
+            }
+            
             const savedStudentYear = localStorage.getItem('studentYear');
             if (savedStudentYear) studentYearSelector.value = savedStudentYear;
             
-            // Add Event Listeners
-            yearSelector.addEventListener('change', () => loadCourseData(yearSelector.value));
-            semesterSelector.addEventListener('change', updateTimetableDisplay);
+            // --- ★ 修正: イベントリスナーで設定を保存する ---
+            yearSelector.addEventListener('change', () => {
+                localStorage.setItem('selectedYear', yearSelector.value);
+                loadCourseData(yearSelector.value);
+            });
+            semesterSelector.addEventListener('change', () => {
+                localStorage.setItem('selectedSemester', semesterSelector.value);
+                updateTimetableDisplay();
+            });
             studentYearSelector.addEventListener('change', () => {
                 localStorage.setItem('studentYear', studentYearSelector.value);
                 if (!classSelectorModal.classList.contains('hidden')) {
