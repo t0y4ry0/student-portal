@@ -169,6 +169,7 @@
         let userTimetable = {};
         let longPressTimer;
         let isLongPress = false;
+        let isScrolling = false; // ★ 修正: スクロール状態を管理するフラグ
         const LONG_PRESS_DURATION = 500; // 500ms
 
         // --- Constants and Settings ---
@@ -275,10 +276,15 @@
                     
                     item.addEventListener('mousedown', (e) => handlePressStart(e, course));
                     item.addEventListener('touchstart', (e) => handlePressStart(e, course));
+                    
                     item.addEventListener('mouseup', (e) => handlePressEnd(e, course));
                     item.addEventListener('touchend', (e) => handlePressEnd(e, course));
+                    
+                    item.addEventListener('mousemove', handleMove);
+                    item.addEventListener('touchmove', handleMove);
+                    
                     item.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
-                    item.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
 
                     item.innerHTML = `
                         <div class="font-bold text-gray-900 dark:text-gray-100">${course.科目名} ${course.クラス ? `(${course.クラス})` : ''}</div>
@@ -291,19 +297,28 @@
             }
         }
         
+        // --- ★ 修正: タッチ＆プレス操作のロジック ---
         function handlePressStart(event, course) {
             isLongPress = false;
+            isScrolling = false;
             longPressTimer = setTimeout(() => {
                 isLongPress = true;
                 showClassDetails(course);
             }, LONG_PRESS_DURATION);
         }
 
+        function handleMove() {
+            isScrolling = true;
+            clearTimeout(longPressTimer);
+        }
+
         function handlePressEnd(event, course) {
             clearTimeout(longPressTimer);
-            if (!isLongPress) {
+            if (!isLongPress && !isScrolling) {
                 selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
             }
+            // Reset flags
+            isScrolling = false;
         }
 
         function showClassDetails(course) {
