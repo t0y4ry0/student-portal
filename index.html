@@ -130,7 +130,7 @@
                 <p class="text-sm text-gray-500 dark:text-gray-400">タップで選択、長押しで詳細表示</p>
                 <input type="search" id="class-search-input" placeholder="科目名、教員名で検索..." class="w-full p-2 mt-2 border rounded dark:bg-gray-700 dark:border-gray-600">
             </header>
-            <main id="class-list" class="p-4 space-y-2 overflow-y-auto"></main>
+            <main id="class-list" class="p-4 space-y-2 overflow-y-auto flex-grow min-h-0"></main>
             <footer class="p-4 border-t dark:border-gray-600 flex justify-end space-x-2">
                  <button onclick="selectClass(null, null, '', '')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">このコマをクリア</button>
                 <button onclick="closeModal('class-selector-modal')" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 text-sm">閉じる</button>
@@ -396,7 +396,6 @@
             // Initialize Semester Selector
             semesterSelector.innerHTML = '<option value="前期">前期</option><option value="後期">後期</option>';
             
-            // --- ★ 修正: 保存された設定を読み込む ---
             const savedYear = localStorage.getItem('selectedYear');
             if (savedYear) yearSelector.value = savedYear;
 
@@ -412,7 +411,6 @@
             const savedStudentYear = localStorage.getItem('studentYear');
             if (savedStudentYear) studentYearSelector.value = savedStudentYear;
             
-            // --- ★ 修正: イベントリスナーで設定を保存する ---
             yearSelector.addEventListener('change', () => {
                 localStorage.setItem('selectedYear', yearSelector.value);
                 loadCourseData(yearSelector.value);
