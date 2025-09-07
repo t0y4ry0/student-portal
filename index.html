@@ -113,21 +113,36 @@
         </div>
     </div>
     
+    <!-- 科目検索モーダル -->
     <div id="class-selector-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-30 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
             <header class="p-4 border-b dark:border-gray-600">
                 <h3 class="font-bold text-lg force-white-text">科目検索</h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">タップで選択、長押しで詳細表示</p>
                 <input type="search" id="class-search-input" placeholder="科目名、教員名で検索..." class="w-full p-2 mt-2 border rounded dark:bg-gray-700 dark:border-gray-600">
             </header>
             <main id="class-list" class="p-4 space-y-2 overflow-y-auto"></main>
             <footer class="p-4 border-t dark:border-gray-600 flex justify-end space-x-2">
                  <button onclick="selectClass(null, null, '', '')" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm">このコマをクリア</button>
-                <button onclick="closeModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 text-sm">閉じる</button>
+                <button onclick="closeModal('class-selector-modal')" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 text-sm">閉じる</button>
             </footer>
         </div>
     </div>
     
-    <div id="image-modal" class="hidden fixed inset-0 z-40 flex items-center justify-center p-4" onclick="closeImageModal()">
+    <!-- 科目詳細モーダル -->
+    <div id="class-details-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-sm max-h-[80vh] flex flex-col">
+            <header class="p-4 border-b dark:border-gray-600">
+                <h3 id="details-title" class="font-bold text-lg force-white-text">科目詳細</h3>
+            </header>
+            <main id="details-content" class="p-4 space-y-2 overflow-y-auto text-sm force-white-text"></main>
+            <footer class="p-4 border-t dark:border-gray-600 flex justify-end">
+                <button onclick="closeModal('class-details-modal')" class="px-4 py-2 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 text-sm">閉じる</button>
+            </footer>
+        </div>
+    </div>
+    
+    <div id="image-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4" onclick="closeImageModal()">
         <div id="brightness-overlay" class="hidden fixed inset-0 bg-white"></div>
         <img id="modal-image" src="" alt="拡大画像" class="max-w-full max-h-full rounded-lg relative z-10">
     </div>
@@ -141,11 +156,13 @@
         }
 
         // --- Global Variables ---
-        let allCourses = []; // Loaded CSV data goes here
+        let allCourses = []; 
         let userTimetable = {};
+        let longPressTimer;
+        const LONG_PRESS_DURATION = 500; // 500ms
 
         // --- Constants and Settings ---
-        const AVAILABLE_YEARS = [2025]; // Add years of CSV files in the data folder
+        const AVAILABLE_YEARS = [2025]; 
         const CLASS_TIMES = [ { start: '08:50', end: '10:20' }, { start: '10:30', end: '12:00' }, { start: '12:40', end: '14:10' }, { start: '14:20', end: '15:50' }, { start: '16:00', end: '17:30' }, { start: '18:00', end: '19:30' }, { start: '19:35', end: '21:05' } ];
         const WEEK_DAYS = ['MO', 'TU', 'WE', 'TH', 'FR'];
         let GEMINI_API_KEY = '';
@@ -167,6 +184,9 @@
         const yearSelector = document.getElementById('year-selector');
         const semesterSelector = document.getElementById('semester-selector');
         const studentYearSelector = document.getElementById('student-year-selector');
+        const classDetailsModal = document.getElementById('class-details-modal');
+        const detailsTitle = document.getElementById('details-title');
+        const detailsContent = document.getElementById('details-content');
         let currentCell = { day: null, period: null };
 
         function flipCard() { document.getElementById('card-container').classList.toggle('flipped'); }
@@ -215,7 +235,7 @@
             }
         }
         
-        // --- Class Search Modal ---
+        // --- Class Search & Details Modals ---
         function openModal(dayIndex, periodIndex) {
             currentCell.day = dayIndex;
             currentCell.period = periodIndex;
@@ -239,10 +259,18 @@
 
             classList.innerHTML = '';
             if (filteredCourses.length > 0) {
-                filteredCourses.slice(0, 50).forEach(course => { // Max 50 results
+                filteredCourses.slice(0, 50).forEach(course => {
                     const item = document.createElement('div');
                     item.className = 'p-3 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900';
-                    item.onclick = () => selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
+                    
+                    // --- Long Press Event Listeners ---
+                    item.addEventListener('mousedown', (e) => handlePressStart(e, course));
+                    item.addEventListener('touchstart', (e) => handlePressStart(e, course));
+                    item.addEventListener('mouseup', (e) => handlePressEnd(e, course));
+                    item.addEventListener('touchend', (e) => handlePressEnd(e, course));
+                    item.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
+                    item.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
                     item.innerHTML = `
                         <div class="font-bold text-gray-900 dark:text-gray-100">${course.科目名} ${course.クラス ? `(${course.クラス})` : ''}</div>
                         <div class="text-sm text-gray-600 dark:text-gray-400">${course.担当教員} / ${course.科目分類}</div>
@@ -252,6 +280,40 @@
             } else {
                 classList.innerHTML = `<p class="text-center text-gray-500">該当する科目がありません。</p>`;
             }
+        }
+        
+        // --- Long Press Logic ---
+        function handlePressStart(event, course) {
+            event.preventDefault();
+            longPressTimer = setTimeout(() => {
+                showClassDetails(course);
+            }, LONG_PRESS_DURATION);
+        }
+
+        function handlePressEnd(event, course) {
+            clearTimeout(longPressTimer);
+            // If the timeout hasn't fired, it's a tap/click
+            if (event.currentTarget.contains(event.target)) {
+                 setTimeout(() => { // Small delay to prevent issues
+                    if (!classDetailsModal.classList.contains('hidden')) return; // Don't select if details are shown
+                    selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
+                }, 50);
+            }
+        }
+
+        function showClassDetails(course) {
+             if (classSelectorModal.classList.contains('hidden')) return; // Prevent firing if search modal is closed
+            detailsTitle.textContent = course.科目名;
+            detailsContent.innerHTML = `
+                <p><strong>担当教員:</strong> ${course.担当教員 || '未設定'}</p>
+                <p><strong>科目分類:</strong> ${course.科目分類 || '未設定'}</p>
+                <p><strong>群:</strong> ${course.群 || 'N/A'}</p>
+                <p><strong>区分:</strong> ${course.区分 || 'N/A'}</p>
+                <p><strong>開校時期:</strong> ${course.開校時期 || '未設定'}</p>
+                <p><strong>単位数:</strong> ${course.単位数 || '未設定'}</p>
+                <p><strong>摘要:</strong> ${course.摘要 || 'なし'}</p>
+            `;
+            classDetailsModal.classList.remove('hidden');
         }
         
         function selectClass(dayIndex, periodIndex, subject, teacher) {
@@ -267,10 +329,12 @@
             }
             saveUserTimetable();
             createTimetableEditor();
-            closeModal();
+            closeModal('class-selector-modal');
         }
 
-        function closeModal() { classSelectorModal.classList.add('hidden'); }
+        function closeModal(modalId) { 
+            document.getElementById(modalId).classList.add('hidden');
+        }
 
         function getTimetableStorageKey() { return `userTimetable_${yearSelector.value}_${semesterSelector.value}`; }
         function saveUserTimetable() { localStorage.setItem(getTimetableStorageKey(), JSON.stringify(userTimetable)); }
@@ -286,26 +350,24 @@
             const filePath = `./data/${year}.csv`;
             try {
                 const response = await fetch(filePath);
-                if (!response.ok) {
-                    throw new Error(`CSV file not found: ${filePath}`);
-                }
+                if (!response.ok) throw new Error(`CSV file not found: ${filePath}`);
                 const csvText = await response.text();
                 Papa.parse(csvText, {
                     header: true,
                     skipEmptyLines: true,
                     complete: (results) => {
                         allCourses = results.data;
-                        updateTimetableDisplay(); // Redraw timetable after data load
+                        updateTimetableDisplay();
                     },
                     error: (error) => {
                         console.error("CSV parsing error:", error);
-                        alert(`${year}.csvの読み込みに失敗しました。ファイルの形式を確認してください。`);
+                        alert(`${year}.csvの読み込みに失敗しました。`);
                         allCourses = [];
                     }
                 });
             } catch (error) {
                 console.error("Error fetching CSV:", error);
-                alert(`${year}.csvが見つかりません。dataフォルダに正しい名前で配置されているか確認してください。`);
+                alert(`${year}.csvが見つかりません。`);
                 allCourses = [];
                 updateTimetableDisplay();
             }
@@ -337,16 +399,13 @@
 
             // Load and set saved student year
             const savedStudentYear = localStorage.getItem('studentYear');
-            if (savedStudentYear) {
-                studentYearSelector.value = savedStudentYear;
-            }
+            if (savedStudentYear) studentYearSelector.value = savedStudentYear;
             
             // Add Event Listeners
             yearSelector.addEventListener('change', () => loadCourseData(yearSelector.value));
             semesterSelector.addEventListener('change', updateTimetableDisplay);
             studentYearSelector.addEventListener('change', () => {
                 localStorage.setItem('studentYear', studentYearSelector.value);
-                // If modal is open, refresh search results
                 if (!classSelectorModal.classList.contains('hidden')) {
                     renderSearchResults();
                 }
