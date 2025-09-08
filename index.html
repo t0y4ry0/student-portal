@@ -223,23 +223,37 @@
         function createTimetableEditor() {
             const tbody = document.querySelector("#timetable-editor tbody");
             tbody.innerHTML = '';
-            for (let i = 0; i < 7; i++) {
+            for (let i = 0; i < 7; i++) { // period
                 const row = document.createElement('tr');
                 const periodCell = document.createElement('td');
                 periodCell.className = 'font-bold p-1 border dark:border-gray-600 align-middle';
                 periodCell.textContent = i + 1;
                 row.appendChild(periodCell);
-                for (let j = 0; j < 5; j++) {
+                for (let j = 0; j < 5; j++) { // day
                     const cell = document.createElement('td');
                     cell.className = 'border dark:border-gray-600 timetable-cell';
                     cell.dataset.day = j; cell.dataset.period = i;
-                    cell.onclick = () => openModal(j, i);
+                    
                     const cellKey = `d${j}-p${i}`;
                     const savedClass = userTimetable[cellKey];
+                    
                     if (savedClass && savedClass.subject) {
                         cell.innerHTML = `<div class="font-bold text-[10px] subject-text">${savedClass.subject}</div><div class="text-[9px] location-text text-gray-500 dark:text-gray-400">${savedClass.teacher}</div>`;
+                        const course = findCourseByNameAndTeacher(savedClass.subject, savedClass.teacher);
+                        if (course) {
+                            cell.addEventListener('mousedown', (e) => handleTouchStart(e, course));
+                            cell.addEventListener('touchstart', (e) => handleTouchStart(e, course), { passive: true });
+                            cell.addEventListener('mouseup', (e) => handleTimetableCellTouchEnd(e, j, i));
+                            cell.addEventListener('touchend', (e) => handleTimetableCellTouchEnd(e, j, i));
+                            cell.addEventListener('mousemove', (e) => handleTouchMove(e));
+                            cell.addEventListener('touchmove', (e) => handleTouchMove(e), { passive: true });
+                            cell.addEventListener('mouseleave', () => clearTimeout(longPressTimer));
+                        } else {
+                             cell.onclick = () => openModal(j, i);
+                        }
                     } else {
                         cell.innerHTML = '&nbsp;';
+                        cell.onclick = () => openModal(j, i);
                     }
                     row.appendChild(cell);
                 }
@@ -254,6 +268,10 @@
             classSearchInput.value = '';
             renderSearchResults(); 
             classSelectorModal.classList.remove('hidden');
+        }
+        
+        function findCourseByNameAndTeacher(subject, teacher) {
+             return allCourses.find(c => c.科目名 === subject && c.担当教員 === teacher);
         }
 
         function renderSearchResults() {
@@ -278,8 +296,8 @@
                     item.addEventListener('mousedown', (e) => handleTouchStart(e, course));
                     item.addEventListener('touchstart', (e) => handleTouchStart(e, course), { passive: true });
                     
-                    item.addEventListener('mouseup', (e) => handleTouchEnd(e, course));
-                    item.addEventListener('touchend', (e) => handleTouchEnd(e, course));
+                    item.addEventListener('mouseup', (e) => handleSearchItemTouchEnd(e, course));
+                    item.addEventListener('touchend', (e) => handleSearchItemTouchEnd(e, course));
                     
                     item.addEventListener('mousemove', (e) => handleTouchMove(e));
                     item.addEventListener('touchmove', (e) => handleTouchMove(e), { passive: true });
@@ -297,7 +315,7 @@
             }
         }
         
-        // --- ★ 修正: タッチ操作のロジックを改善 ---
+        // --- Touch & Press Interaction Logic ---
         function handleTouchStart(event, course) {
             isLongPress = false;
             isMoved = false;
@@ -326,21 +344,33 @@
             const diffX = Math.abs(touchStartX - currentX);
             const diffY = Math.abs(touchStartY - currentY);
 
-            if (diffX > 10 || diffY > 10) { // 10px以上動いたらスクロールと判定
+            if (diffX > 10 || diffY > 10) { 
                 isMoved = true;
                 clearTimeout(longPressTimer);
             }
         }
-
-        function handleTouchEnd(event, course) {
+        
+        function handleSearchItemTouchEnd(event, course) {
             clearTimeout(longPressTimer);
             if (!isLongPress && !isMoved) {
-                // setTimeoutを使い、他のイベント処理との競合を避ける
                 setTimeout(() => {
                     selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
                 }, 0);
             }
-            // フラグをリセット
+            resetTouchFlags();
+        }
+        
+        function handleTimetableCellTouchEnd(event, day, period) {
+             clearTimeout(longPressTimer);
+            if (!isLongPress && !isMoved) {
+                setTimeout(() => {
+                    openModal(day, period);
+                }, 0);
+            }
+            resetTouchFlags();
+        }
+        
+        function resetTouchFlags() {
             isLongPress = false;
             isMoved = false;
             touchStartX = undefined;
@@ -348,7 +378,7 @@
         }
 
         function showClassDetails(course) {
-             if (classSelectorModal.classList.contains('hidden')) return;
+             if (classSelectorModal.classList.contains('hidden') && timetableView.classList.contains('hidden')) return;
             detailsTitle.textContent = course.科目名;
             detailsContent.innerHTML = `
                 <p><strong>担当教員:</strong> ${course.担当教員 || '未設定'}</p>
