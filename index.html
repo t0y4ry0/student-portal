@@ -297,7 +297,7 @@
             }
         }
         
-        // --- Touch & Press Interaction Logic ---
+        // --- ★ 修正: タッチ操作のロジックを改善 ---
         function handleTouchStart(event, course) {
             isLongPress = false;
             isMoved = false;
@@ -326,7 +326,7 @@
             const diffX = Math.abs(touchStartX - currentX);
             const diffY = Math.abs(touchStartY - currentY);
 
-            if (diffX > 10 || diffY > 10) { // 10px threshold for scrolling
+            if (diffX > 10 || diffY > 10) { // 10px以上動いたらスクロールと判定
                 isMoved = true;
                 clearTimeout(longPressTimer);
             }
@@ -335,9 +335,12 @@
         function handleTouchEnd(event, course) {
             clearTimeout(longPressTimer);
             if (!isLongPress && !isMoved) {
-                selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
+                // setTimeoutを使い、他のイベント処理との競合を避ける
+                setTimeout(() => {
+                    selectClass(currentCell.day, currentCell.period, course.科目名, course.担当教員);
+                }, 0);
             }
-            // Reset flags
+            // フラグをリセット
             isLongPress = false;
             isMoved = false;
             touchStartX = undefined;
